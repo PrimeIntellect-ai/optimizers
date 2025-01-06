@@ -618,6 +618,9 @@ def matrix_eigenvectors(
 
     # Validate topk_compression if provided
     if topk_compression is not None:
+        if topk_compression > A.shape[0]:
+            topk_compression = A.shape[0]
+
         if topk_compression <= 0:
             raise ValueError("topk_compression must be positive!")
 
