@@ -110,9 +110,7 @@ def matrix_inverse_root(
     elif type(root_inv_config) is CoupledNewtonConfig:
         # NOTE: Use Fraction.is_integer() instead when Python 3.12+ is available
         if root.denominator != 1:
-            raise ValueError(
-                f"{root.denominator=} must be equal to 1 to use coupled inverse Newton iteration!"
-            )
+            raise ValueError(f"{root.denominator=} must be equal to 1 to use coupled inverse Newton iteration!")
 
         X, _, termination_flag, _, _ = _matrix_inverse_root_newton(
             A=A,
@@ -121,9 +119,7 @@ def matrix_inverse_root(
             **asdict(root_inv_config),
         )
         if termination_flag == NewtonConvergenceFlag.REACHED_MAX_ITERS:
-            logging.warning(
-                "Newton did not converge and reached maximum number of iterations!"
-            )
+            logging.warning("Newton did not converge and reached maximum number of iterations!")
     elif type(root_inv_config) is CoupledHigherOrderConfig:
         X, _, termination_flag, _, _ = _matrix_inverse_root_higher_order(
             A=A,
@@ -132,9 +128,7 @@ def matrix_inverse_root(
             **asdict(root_inv_config),
         )
         if termination_flag == NewtonConvergenceFlag.REACHED_MAX_ITERS:
-            logging.warning(
-                "Higher order method did not converge and reached maximum number of iterations!"
-            )
+            logging.warning("Higher order method did not converge and reached maximum number of iterations!")
     else:
         raise NotImplementedError(
             f"Root inverse config is not implemented! Specified root inverse config is {root_inv_config=}."
@@ -231,9 +225,7 @@ def _matrix_inverse_root_eigen(
         raise ValueError(f"Root {root} should be positive!")
 
     # compute eigendecomposition and compute minimum eigenvalue
-    L, Q = matrix_eigenvalue_decomposition(
-        A, retry_double_precision=retry_double_precision
-    )
+    L, Q = matrix_eigenvalue_decomposition(A, retry_double_precision=retry_double_precision)
 
     lambda_min = torch.min(L)
 
@@ -314,9 +306,7 @@ def _matrix_inverse_root_newton(
 
     # determine convergence flag
     termination_flag = (
-        NewtonConvergenceFlag.CONVERGED
-        if error <= tolerance
-        else NewtonConvergenceFlag.REACHED_MAX_ITERS
+        NewtonConvergenceFlag.CONVERGED if error <= tolerance else NewtonConvergenceFlag.REACHED_MAX_ITERS
     )
 
     return X, M, termination_flag, iteration, error
@@ -376,9 +366,7 @@ def _matrix_inverse_root_higher_order(
     tf32_flag = torch.backends.cuda.matmul.allow_tf32
     if disable_tf32:
         torch.backends.cuda.matmul.allow_tf32 = False
-    logger.debug(
-        f"Using tf32 precision for fp32 matmul: {torch.backends.cuda.matmul.allow_tf32}"
-    )
+    logger.debug(f"Using tf32 precision for fp32 matmul: {torch.backends.cuda.matmul.allow_tf32}")
 
     try:
         t_iter_begin = time.perf_counter()
@@ -415,9 +403,7 @@ def _matrix_inverse_root_higher_order(
 
         # We have not seen lambda_max being Inf in practice, however there is not a whole lot we can do in this pathological case and its good to bail early
         if not isfinite(lambda_max_approx):
-            raise ArithmeticError(
-                "Input matrix has entries close to inf, exiting root inverse"
-            )
+            raise ArithmeticError("Input matrix has entries close to inf, exiting root inverse")
 
         # Now scale and setup our variables
         epsilon = max(rel_epsilon * lambda_max_approx, abs_epsilon)
@@ -458,9 +444,7 @@ def _matrix_inverse_root_higher_order(
 
             # create M_p via Horner's rule
             base_matrix = identity - M
-            M_p = base_matrix.mul(b[order - 1]).add_(
-                identity, alpha=float(b[order - 2])
-            )
+            M_p = base_matrix.mul(b[order - 1]).add_(identity, alpha=float(b[order - 2]))
             for i in reversed(range(order - 2)):
                 M_p = torch.addmm(identity, M_p, base_matrix, beta=float(b[i]))
 
@@ -487,15 +471,11 @@ def _matrix_inverse_root_higher_order(
         else:
             # determine convergence flag based on error and tolerance because the main while loop exited with False condition.
             termination_flag = (
-                NewtonConvergenceFlag.REACHED_MAX_ITERS
-                if error > tolerance
-                else NewtonConvergenceFlag.CONVERGED
+                NewtonConvergenceFlag.REACHED_MAX_ITERS if error > tolerance else NewtonConvergenceFlag.CONVERGED
             )
 
         # compute a cheap error proxy
-        true_error = torch.linalg.vector_norm(
-            A_ridge @ torch.linalg.matrix_power(X, p) - identity, torch.inf
-        )
+        true_error = torch.linalg.vector_norm(A_ridge @ torch.linalg.matrix_power(X, p) - identity, torch.inf)
         n_matmul += math.ceil(math.log2(p)) + 1
 
         # If the error is too high, let us log and raise an exception for investigation. This should be relatively infrequent (if epsilon isn't too small)
@@ -586,12 +566,8 @@ def compute_matrix_root_inverse_residuals(
         make_positive_semidefinite=True,
     )
 
-    A_reg = A.double() + epsilon * torch.eye(
-        A.shape[0], dtype=torch.float64, device=A.device
-    )
-    relative_residual = torch.dist(X_invr, A_reg, p=torch.inf) / torch.norm(
-        A_reg, p=torch.inf
-    )
+    A_reg = A.double() + epsilon * torch.eye(A.shape[0], dtype=torch.float64, device=A.device)
+    relative_residual = torch.dist(X_invr, A_reg, p=torch.inf) / torch.norm(A_reg, p=torch.inf)
 
     return relative_error, relative_residual
 
@@ -615,7 +591,7 @@ def matrix_eigenvectors(
         eigenvector_computation_config (EigenvectorConfig): Determines how eigenvectors are computed.
             (Default: DefaultEighEigenvectorConfig)
         is_diagonal (bool): Whether A is diagonal. (Default: False)
-        topk_compression (int | None): Number of top eigenvectors to keep, others will be zeroed out. 
+        topk_compression (int | None): Number of top eigenvectors to keep, others will be zeroed out.
             If None, keeps all. (Default: None)
 
     Returns:
@@ -644,59 +620,56 @@ def matrix_eigenvectors(
     if topk_compression is not None:
         if topk_compression <= 0:
             raise ValueError("topk_compression must be positive!")
-        if topk_compression > A.shape[0]:
-            raise ValueError("topk_compression cannot be larger than matrix dimension!")
-        
+
     if isinstance(eigenvector_computation_config, EighEigenvectorConfig):
         eigenvalues, eigenvectors = matrix_eigenvalue_decomposition(
             A,
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
-        
+
         if topk_compression is not None:
             # Sort eigenvalues and eigenvectors in descending order
-            eigenvalues, indices = torch.sort(eigenvalues, descending=True) # note here only need topk so full sort is not efficient
+            eigenvalues, indices = torch.sort(
+                eigenvalues, descending=True
+            )  # note here only need topk so full sort is not efficient
             eigenvectors = eigenvectors[:, indices]
-            
+
             # Zero out all but top k eigenvectors
             mask = torch.zeros_like(eigenvectors)
             mask[:, :topk_compression] = 1.0
             eigenvectors = eigenvectors * mask
-                
+
         return eigenvectors
-        
+
     elif isinstance(eigenvector_computation_config, QRConfig):
-        assert (
-            eigenvectors_estimate is not None
-        ), "Estimate of eigenvectors is required when using QRConfig."
-        
+        assert eigenvectors_estimate is not None, "Estimate of eigenvectors is required when using QRConfig."
+
         eigenvectors = _compute_orthogonal_iterations(
             A,
             eigenvectors_estimate=eigenvectors_estimate,
             max_iterations=eigenvector_computation_config.max_iterations,
             tolerance=eigenvector_computation_config.tolerance,
         )
-        
+
         if topk_compression is not None:
             # For QR method, we need to compute eigenvalues to sort them
             eigenvalues = torch.diagonal(eigenvectors.T @ A @ eigenvectors)
-            _, indices = torch.sort(eigenvalues, descending=True) # note here only need topk so full sort is not efficient
+            _, indices = torch.sort(
+                eigenvalues, descending=True
+            )  # note here only need topk so full sort is not efficient
             eigenvectors = eigenvectors[:, indices]
-            
+
             # Zero out all but top k eigenvectors
             mask = torch.zeros_like(eigenvectors)
             mask[:, :topk_compression] = 1.0
             eigenvectors = eigenvectors * mask
-            
-        return eigenvectors
-            
 
-            
+        return eigenvectors
+
     else:
         raise NotImplementedError(
             f"Eigenvector computation method is not implemented! Specified eigenvector method is {eigenvector_computation_config=}."
         )
-
 
 
 def _compute_orthogonal_iterations(
