@@ -631,7 +631,13 @@ def matrix_eigenvectors(
 
             # Zero out all but top k eigenvectors
             mask = torch.zeros_like(eigenvectors)
-            mask[:, : eigenvector_computation_config.topk_compression] = 1.0
+
+            if isinstance(eigenvector_computation_config.topk_compression, int):
+                topk = eigenvector_computation_config.topk_compression
+            else:
+                topk = int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0])
+
+            mask[:, :topk] = 1.0
             eigenvectors = eigenvectors * mask
 
         return eigenvectors
