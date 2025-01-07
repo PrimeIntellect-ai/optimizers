@@ -26,6 +26,7 @@ from matrix_functions_types import (
     EighEigenvectorConfig,
     QRConfig,
     RootInvConfig,
+    TopKCompressionEigenvectorConfig,
 )
 
 from torch import Tensor
@@ -577,7 +578,6 @@ def matrix_eigenvectors(
     eigenvectors_estimate: Tensor | None = None,
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
-    topk_compression: int | None = None,
 ) -> Tensor:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
@@ -616,21 +616,13 @@ def matrix_eigenvectors(
             device=A.device,
         )
 
-    # Validate topk_compression if provided
-    if topk_compression is not None:
-        if topk_compression > A.shape[0]:
-            topk_compression = A.shape[0]
-
-        if topk_compression <= 0:
-            raise ValueError("topk_compression must be positive!")
-
     if isinstance(eigenvector_computation_config, EighEigenvectorConfig):
         eigenvalues, eigenvectors = matrix_eigenvalue_decomposition(
             A,
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
 
-        if topk_compression is not None:
+        if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
             # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
                 eigenvalues, descending=True
@@ -639,7 +631,7 @@ def matrix_eigenvectors(
 
             # Zero out all but top k eigenvectors
             mask = torch.zeros_like(eigenvectors)
-            mask[:, :topk_compression] = 1.0
+            mask[:, : eigenvector_computation_config.topk_compression] = 1.0
             eigenvectors = eigenvectors * mask
 
         return eigenvectors
@@ -654,18 +646,18 @@ def matrix_eigenvectors(
             tolerance=eigenvector_computation_config.tolerance,
         )
 
-        if topk_compression is not None:
-            # For QR method, we need to compute eigenvalues to sort them
-            eigenvalues = torch.diagonal(eigenvectors.T @ A @ eigenvectors)
-            _, indices = torch.sort(
-                eigenvalues, descending=True
-            )  # note here only need topk so full sort is not efficient
-            eigenvectors = eigenvectors[:, indices]
+        # if topk_compression is not None:
+        #     # For QR method, we need to compute eigenvalues to sort them
+        #     eigenvalues = torch.diagonal(eigenvectors.T @ A @ eigenvectors)
+        #     _, indices = torch.sort(
+        #         eigenvalues, descending=True
+        #     )  # note here only need topk so full sort is not efficient
+        #     eigenvectors = eigenvectors[:, indices]
 
-            # Zero out all but top k eigenvectors
-            mask = torch.zeros_like(eigenvectors)
-            mask[:, :topk_compression] = 1.0
-            eigenvectors = eigenvectors * mask
+        #     # Zero out all but top k eigenvectors
+        #     mask = torch.zeros_like(eigenvectors)
+        #     mask[:, :topk_compression] = 1.0
+        #     eigenvectors = eigenvectors * mask
 
         return eigenvectors
 
