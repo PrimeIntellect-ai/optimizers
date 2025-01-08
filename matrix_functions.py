@@ -667,23 +667,24 @@ def matrix_eigenvectors(
             A,
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
-        effective_rank = compute_effective_rank(eigenvalues)
-
-        # rank = int(os.environ.get("RANK", 0))
-        potential_compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
-
-        # if rank == 0:
-        # import wandb
-
-        # wandb.log(
-        #     {
-        #         "effective_rank": effective_rank,
-        #         "og_rank": eigenvalues.shape[0],
-        #         "potential_compression_ratio": 1 - effective_rank / eigenvalues.shape[0],
-        #     }
-        # )
 
         if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
+            effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.compression_t)
+
+            # rank = int(os.environ.get("RANK", 0))
+            potential_compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
+
+            # if rank == 0:
+            # import wandb
+
+            # wandb.log(
+            #     {
+            #         "effective_rank": effective_rank,
+            #         "og_rank": eigenvalues.shape[0],
+            #         "potential_compression_ratio": 1 - effective_rank / eigenvalues.shape[0],
+            #     }
+            # )
+
             if eigenvector_computation_config.auto:
                 topk = effective_rank
             elif isinstance(eigenvector_computation_config.topk_compression, int):

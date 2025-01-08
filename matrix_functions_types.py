@@ -135,15 +135,26 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
 
     Args:
         topk_compression (int | float ): The number of eigenvectors to keep, if float then it is a fraction of the number of eigenvectors
+        min_compression_ratio (float): The minimum compression ratio available to actually do compression.
+        min_dim (int): The minimum dimension to actually do compression.
+
+        auto (bool): If set, the compression ratio is automatically determined based on the eigenvalues up to compression_t value. (Default: False)
+        compression_t (float): The threshold value to use for auto compression.
 
     """
 
     topk_compression: int | float = 0.999
     min_compression_ratio: float = 0.0
+    min_dim: int = 1024
 
     auto: bool = False
+
+    compression_t: float = 0.95
 
     def __post_init__(self):
         if isinstance(self.topk_compression, float):
             if not 0 < self.topk_compression <= 1:
                 raise ValueError("If topk_compression is float, it must be between 0 and 1")
+
+            if 0 < self.compression_t and self.compression_t > 1:
+                raise ValueError("compression_value must be between 0 and 1")
