@@ -151,6 +151,8 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
 
     compression_t: float = 0.95
 
+    warmup_steps: int = 0
+
     def __post_init__(self):
         if isinstance(self.topk_compression, float):
             if not 0 < self.topk_compression <= 1:

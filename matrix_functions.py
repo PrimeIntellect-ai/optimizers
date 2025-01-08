@@ -624,6 +624,7 @@ def matrix_eigenvectors(
     eigenvectors_estimate: Tensor | None = None,
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
+    step: int | None = None,
 ) -> Tensor:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
@@ -668,9 +669,13 @@ def matrix_eigenvectors(
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
 
+        if step is None:
+            raise ValueError("step param is required when using EighEigenvectorConfig.")
+
         if (
             isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig)
             and eigenvalues.shape[0] > eigenvector_computation_config.min_dim
+            and step > eigenvector_computation_config.warmup_steps
         ):
             effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.compression_t)
 

@@ -532,7 +532,7 @@ class BaseShampooPreconditionerList(PreconditionerList, Generic[ShampooKronecker
             )
 
     @abstractmethod
-    def _amortized_computation(self) -> None:
+    def _amortized_computation(self, step: int) -> None:
         """
         Computes the amortized computation needed for each Shampoo preconditioner implementation.
         This amortized computation is computation heavy work that cannot be done for each step.
@@ -631,7 +631,7 @@ class BaseShampooPreconditionerList(PreconditionerList, Generic[ShampooKronecker
             # In Shampoo, this is equivalent to computing the inverse factor matrix.
             # In Eigenvalue-Corrected Shampoo, this is equivalent to computing the eigenvector of the factor matrix.
             if perform_amortized_computation:
-                self._amortized_computation()
+                self._amortized_computation(step=step)
 
     def _initialize_state_lists(
         self,
@@ -797,7 +797,7 @@ class ShampooPreconditionerList(BaseShampooPreconditionerList[ShampooKroneckerFa
             )
 
     @torch.compiler.disable
-    def _amortized_computation(self) -> None:
+    def _amortized_computation(self, step: int) -> None:
         # NOTE: This function currently only computes the matrix root inverse based on
         # the masked lists which combines both selection based on the distributor and where
         # grad is not None. Implicitly, this assumes that there are no changes between the
@@ -1032,7 +1032,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
             return tuple(preconditioned_grad_list)
 
     @torch.compiler.disable
-    def _amortized_computation(self) -> None:
+    def _amortized_computation(self, step: int) -> None:
         # NOTE: This function currently only computes the preconditioner eigenvectors based on
         # the masked lists which combines both selection based on the distributor and where
         # grad is not None. Implicitly, this assumes that there are no changes between the
@@ -1071,6 +1071,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             eigenvectors_estimate=factor_matrix_eigenvectors,
                             eigenvector_computation_config=eigenvector_computation_config,
                             is_diagonal=bool(is_factor_matrix_diagonal),
+                            step=step,
                         )
                         # Add success to success tracker.
                         success_tracker.append(True)
