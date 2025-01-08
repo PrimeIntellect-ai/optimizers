@@ -687,6 +687,9 @@ def matrix_eigenvectors(
 
             if eigenvector_computation_config.auto:
                 topk = effective_rank
+                print(
+                    f"Effective rank: {effective_rank}, og_rank: {eigenvalues.shape[0]}, compression_ratio: {potential_compression_ratio}"
+                )
             elif isinstance(eigenvector_computation_config.topk_compression, int):
                 topk = eigenvector_computation_config.topk_compression
             else:
