@@ -138,8 +138,10 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
 
     """
 
-    topk_compression: int | float
+    topk_compression: int | float = 0.999
     min_compression_ratio: float = 0.0
+
+    auto: bool = False
 
     def __post_init__(self):
         if isinstance(self.topk_compression, float):

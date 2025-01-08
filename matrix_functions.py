@@ -10,7 +10,6 @@ LICENSE file in the root directory of this source tree.
 import enum
 import logging
 import math
-import os
 import time
 from dataclasses import asdict
 from fractions import Fraction
@@ -670,21 +669,28 @@ def matrix_eigenvectors(
         )
         effective_rank = compute_effective_rank(eigenvalues)
 
-        rank = int(os.environ.get("RANK", 0))
+        # rank = int(os.environ.get("RANK", 0))
         potential_compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
 
-        if rank == 0:
-            import wandb
+        # if rank == 0:
+        # import wandb
 
-            wandb.log(
-                {
-                    "effective_rank": effective_rank,
-                    "og_rank": eigenvalues.shape[0],
-                    "potential_compression_ratio": 1 - effective_rank / eigenvalues.shape[0],
-                }
-            )
+        # wandb.log(
+        #     {
+        #         "effective_rank": effective_rank,
+        #         "og_rank": eigenvalues.shape[0],
+        #         "potential_compression_ratio": 1 - effective_rank / eigenvalues.shape[0],
+        #     }
+        # )
 
         if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
+            if eigenvector_computation_config.auto:
+                topk = effective_rank
+            elif isinstance(eigenvector_computation_config.topk_compression, int):
+                topk = eigenvector_computation_config.topk_compression
+            else:
+                topk = int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0])
+
             if potential_compression_ratio < eigenvector_computation_config.min_compression_ratio:
                 print(
                     f"Skipping eigenvector computation due to low compression ratio: {potential_compression_ratio}, effective_rank = {effective_rank}, og_rank = {eigenvalues.shape[0]}"
@@ -698,11 +704,6 @@ def matrix_eigenvectors(
 
             # Zero out all but top k eigenvectors
             mask = torch.zeros_like(eigenvectors)
-
-            if isinstance(eigenvector_computation_config.topk_compression, int):
-                topk = eigenvector_computation_config.topk_compression
-            else:
-                topk = int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0])
 
             mask[:, :topk] = 1.0
             eigenvectors = eigenvectors * mask
