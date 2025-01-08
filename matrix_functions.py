@@ -685,7 +685,7 @@ def matrix_eigenvectors(
             )
 
         if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
-            if potential_compression_ratio > eigenvector_computation_config.min_compression_ratio:
+            if potential_compression_ratio < eigenvector_computation_config.min_compression_ratio:
                 print(
                     f"Skipping eigenvector computation due to low compression ratio: {potential_compression_ratio}, effective_rank = {effective_rank}, og_rank = {eigenvalues.shape[0]}"
                 )
