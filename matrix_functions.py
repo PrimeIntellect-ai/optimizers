@@ -10,6 +10,7 @@ LICENSE file in the root directory of this source tree.
 import enum
 import logging
 import math
+import os
 import time
 from dataclasses import asdict
 from fractions import Fraction
@@ -573,6 +574,52 @@ def compute_matrix_root_inverse_residuals(
     return relative_error, relative_residual
 
 
+def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95) -> int:
+    """
+    Compute the effective rank of a matrix from its eigenvalues.
+
+    The effective rank is defined as the number of eigenvalues needed to capture
+    a certain percentage (threshold) of the total variance/energy in the system.
+
+    Args:
+        eigenvalues (torch.Tensor): 1D tensor of eigenvalues (can be unsorted)
+        threshold (float): Variance threshold (0 to 1), default 0.95 (95%)
+
+    Returns:
+        int: Effective rank (number of eigenvalues needed to reach threshold)
+
+    Raises:
+        ValueError: If threshold is not between 0 and 1
+        ValueError: If eigenvalues are not 1D
+    """
+    if not 0 < threshold <= 1:
+        raise ValueError(f"Threshold must be between 0 and 1, got {threshold}")
+
+    if eigenvalues.dim() != 1:
+        raise ValueError(f"Expected 1D tensor of eigenvalues, got shape {eigenvalues.shape}")
+
+    # Take absolute values and sort in descending order
+    eigenvalues = torch.abs(eigenvalues)
+    sorted_eigenvalues, _ = torch.sort(eigenvalues, descending=True)
+
+    # Compute cumulative sum and normalize
+    total_variance = torch.sum(sorted_eigenvalues)
+    if total_variance == 0:
+        return 0
+
+    cumulative_variance_ratio = torch.cumsum(sorted_eigenvalues, 0) / total_variance
+
+    # Find number of eigenvalues needed to reach threshold
+    effective_rank = torch.sum(cumulative_variance_ratio <= threshold).item() + 1
+
+    # Handle edge case where even all eigenvalues don't reach threshold
+    # (can happen with very small numerical values)
+    if effective_rank > len(eigenvalues):
+        effective_rank = len(eigenvalues)
+
+    return effective_rank
+
+
 def matrix_eigenvectors(
     A: Tensor,
     eigenvectors_estimate: Tensor | None = None,
@@ -621,6 +668,19 @@ def matrix_eigenvectors(
             A,
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
+        effective_rank = compute_effective_rank(eigenvalues)
+
+        rank = int(os.environ.get("RANK", 0))
+        if rank == 0:
+            import wandb
+
+            wandb.log(
+                {
+                    "effective_rank": effective_rank,
+                    "og_rank": eigenvalues.shape[0],
+                    "potential_compression_ratio": 1 - effective_rank / eigenvalues.shape[0],
+                }
+            )
 
         if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
             # Sort eigenvalues and eigenvectors in descending order
