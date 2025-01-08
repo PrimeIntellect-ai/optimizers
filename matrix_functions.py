@@ -671,6 +671,8 @@ def matrix_eigenvectors(
         effective_rank = compute_effective_rank(eigenvalues)
 
         rank = int(os.environ.get("RANK", 0))
+        potential_compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
+
         if rank == 0:
             import wandb
 
@@ -683,6 +685,11 @@ def matrix_eigenvectors(
             )
 
         if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
+            if potential_compression_ratio > eigenvector_computation_config.min_compression_ratio:
+                print(
+                    f"Skipping eigenvector computation due to low compression ratio: {potential_compression_ratio}, effective_rank = {effective_rank}, og_rank = {eigenvalues.shape[0]}"
+                )
+                return eigenvectors
             # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
                 eigenvalues, descending=True
