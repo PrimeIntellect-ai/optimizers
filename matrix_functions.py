@@ -668,7 +668,10 @@ def matrix_eigenvectors(
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
 
-        if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig):
+        if (
+            isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig)
+            and eigenvalues.shape[0] > eigenvector_computation_config.min_dim
+        ):
             effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.compression_t)
 
             # rank = int(os.environ.get("RANK", 0))
