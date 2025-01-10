@@ -30,8 +30,11 @@ from matrix_functions_types import (
 )
 
 from torch import Tensor
+from typing import NamedTuple
+
 
 logger: logging.Logger = logging.getLogger(__name__)
+
 
 
 class NewtonConvergenceFlag(enum.Enum):
@@ -619,13 +622,24 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95) -
     return effective_rank
 
 
+class EigenStats(NamedTuple):
+    effective_rank: int
+    og_rank: int
+    
+    @property
+    def compression_ratio(self):
+        return 1 - self.effective_rank / self.og_rank
+    
+    def __repr__(self):
+        return f"Effective rank: {self.effective_rank}, og_rank: {self.og_rank}, compression_ratio: {self.compression_ratio}"
+
 def matrix_eigenvectors(
     A: Tensor,
     eigenvectors_estimate: Tensor | None = None,
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
     step: int | None = None,
-) -> Tensor:
+) -> Tensor | EigenStats:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
 
@@ -663,12 +677,20 @@ def matrix_eigenvectors(
             device=A.device,
         )
 
+    
     if isinstance(eigenvector_computation_config, EighEigenvectorConfig):
         eigenvalues, eigenvectors = matrix_eigenvalue_decomposition(
             A,
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
 
+        compression_t = eigenvector_computation_config.compression_t if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig) else TopKCompressionEigenvectorConfig().compression_t
+        
+        eigen_stats = EigenStats(
+            effective_rank=compute_effective_rank(eigenvalues, compression_t),
+            og_rank=eigenvalues.shape[0],
+        )
+        
         if step is None:
             raise ValueError("step param is required when using EighEigenvectorConfig.")
 
@@ -677,36 +699,19 @@ def matrix_eigenvectors(
             and eigenvalues.shape[0] > eigenvector_computation_config.min_dim
             and step > eigenvector_computation_config.warmup_steps
         ):
-            effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.compression_t)
 
-            # rank = int(os.environ.get("RANK", 0))
-            potential_compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
 
-            # if rank == 0:
-            # import wandb
-
-            # wandb.log(
-            #     {
-            #         "effective_rank": effective_rank,
-            #         "og_rank": eigenvalues.shape[0],
-            #         "potential_compression_ratio": 1 - effective_rank / eigenvalues.shape[0],
-            #     }
-            # )
 
             if eigenvector_computation_config.auto:
-                topk = effective_rank
-                print(
-                    f"Effective rank: {effective_rank}, og_rank: {eigenvalues.shape[0]}, compression_ratio: {potential_compression_ratio}"
-                )
+                topk = eigen_stats.effective_rank
+                print(eigen_stats)
             elif isinstance(eigenvector_computation_config.topk_compression, int):
                 topk = eigenvector_computation_config.topk_compression
             else:
                 topk = int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0])
 
-            if potential_compression_ratio < eigenvector_computation_config.min_compression_ratio:
-                print(
-                    f"Skipping eigenvector computation due to low compression ratio: {potential_compression_ratio}, effective_rank = {effective_rank}, og_rank = {eigenvalues.shape[0]}"
-                )
+            if eigen_stats.compression_ratio < eigenvector_computation_config.min_compression_ratio:
+                print(f"Skipping eigenvector computation due to low compression ratio: {eigen_stats}")
                 return eigenvectors
             # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
@@ -720,9 +725,12 @@ def matrix_eigenvectors(
             mask[:, :topk] = 1.0
             eigenvectors = eigenvectors * mask
 
-        return eigenvectors
+        return eigenvectors, eigen_stats
 
     elif isinstance(eigenvector_computation_config, QRConfig):
+        
+        raise NotImplementedError("QRConfig is not implemented yet.")
+        
         assert eigenvectors_estimate is not None, "Estimate of eigenvectors is required when using QRConfig."
 
         eigenvectors = _compute_orthogonal_iterations(

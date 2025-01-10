@@ -24,7 +24,7 @@ from distributed_shampoo.shampoo_types import (
 )
 from distributed_shampoo.utils.shampoo_block_info import BlockInfo
 from distributed_shampoo.utils.shampoo_utils import compress_list, get_dtype_size
-from matrix_functions import check_diagonal, matrix_eigenvectors, matrix_inverse_root
+from matrix_functions import EigenStats, check_diagonal, matrix_eigenvectors, matrix_inverse_root
 
 from matrix_functions_types import EigenvectorConfig, RootInvConfig
 from optimizer_modules import OptimizerModule
@@ -303,6 +303,7 @@ class EigenvalueCorrectedShampooKroneckerFactorsList(BaseShampooKroneckerFactors
 
     factor_matrices_eigenvectors: tuple[Tensor, ...]
     corrected_eigenvalues: Tensor
+    eigen_stats: EigenStats | None = None
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -1065,8 +1066,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         self._preconditioner_config.amortized_computation_config,
                     )
                     try:
-                        logger.info(f"TYPEEEE: {type(eigenvector_computation_config)}...")
-                        computed_eigenvectors = matrix_eigenvectors(
+                        computed_eigenvectors, eigen_stats = matrix_eigenvectors(
                             A=factor_matrix,
                             eigenvectors_estimate=factor_matrix_eigenvectors,
                             eigenvector_computation_config=eigenvector_computation_config,
@@ -1093,6 +1093,8 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             f"To mitigate, check factor matrix before the matrix computation: {factor_matrix=}"
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
+                    print(type(self._masked_kronecker_factors_list[idx]))
+                    # self._masked_kronecker_factors_list[idx].eigen_stats = eigen_stats
 
                 # Only reuse previous eigenvectors if tolerance is not exceeded.
                 self._raise_exception_if_failure_tolerance_exceeded(
