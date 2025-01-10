@@ -1250,3 +1250,27 @@ class DistributedShampoo(torch.optim.Optimizer):
                 param_group_to_load = param_groups_to_load[param_group_key]
                 for key, value in param_group_to_load.items():
                     group[key] = deepcopy(value)
+
+    
+    @torch.no_grad()
+    def eigenvector_stats(self, key_to_param: Iterator[tuple[str, torch.Tensor]], summary: bool = False):
+        # Create mapping from parameter to its name
+        param_to_key = {param: key for key, param in key_to_param}
+        
+        stats = {}
+        for idx, (state_lists, group) in enumerate(zip(self._per_group_state_lists, self.param_groups)):
+            shampoo_preconditioner_list = state_lists[SHAMPOO_PRECONDITIONER_LIST]
+            if isinstance(shampoo_preconditioner_list, EigenvalueCorrectedShampooPreconditionerList):
+                # Get eigenvalue stats for this group
+                group_eigen_stats = shampoo_preconditioner_list.eigenvector_stats()
+                
+                # Map each parameter to its stats
+                param_stats = {}
+                for param, eigen_stat in zip(group[PARAMS], group_eigen_stats):
+                    if param in param_to_key:
+                        param_key = param_to_key[param]
+                        param_stats[param_key] = eigen_stat
+                
+                stats[f"group_{idx}"] = param_stats
+           
+        return stats

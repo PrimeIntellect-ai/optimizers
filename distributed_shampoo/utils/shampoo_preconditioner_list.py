@@ -1093,8 +1093,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             f"To mitigate, check factor matrix before the matrix computation: {factor_matrix=}"
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
-                    print(type(self._masked_kronecker_factors_list[idx]))
-                    # self._masked_kronecker_factors_list[idx].eigen_stats = eigen_stats
+                    self._masked_kronecker_factors_list[idx].eigen_stats = eigen_stats
 
                 # Only reuse previous eigenvectors if tolerance is not exceeded.
                 self._raise_exception_if_failure_tolerance_exceeded(
@@ -1104,3 +1103,6 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         f"The number of failed eigenvector computations for factors {kronecker_factors.factor_matrix_indices} exceeded the allowed tolerance."
                     ),
                 )
+                
+    def eigenvector_stats(self) -> tuple[EigenStats | None, ...]:
+        return tuple(kronecker_factors.eigen_stats for kronecker_factors in self._masked_kronecker_factors_list)

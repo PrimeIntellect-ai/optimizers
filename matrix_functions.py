@@ -633,6 +633,13 @@ class EigenStats(NamedTuple):
     def __repr__(self):
         return f"Effective rank: {self.effective_rank}, og_rank: {self.og_rank}, compression_ratio: {self.compression_ratio}"
 
+    def log_stats(self) -> dict[str, int|float]:
+        return {
+            "effective_rank": self.effective_rank,
+            "og_rank": self.og_rank,
+            "compression_ratio": self.compression_ratio,
+        }
+
 def matrix_eigenvectors(
     A: Tensor,
     eigenvectors_estimate: Tensor | None = None,
@@ -704,7 +711,6 @@ def matrix_eigenvectors(
 
             if eigenvector_computation_config.auto:
                 topk = eigen_stats.effective_rank
-                print(eigen_stats)
             elif isinstance(eigenvector_computation_config.topk_compression, int):
                 topk = eigenvector_computation_config.topk_compression
             else:
