@@ -64,6 +64,7 @@ from distributed_shampoo.shampoo_types import (
     USE_MERGE_DIMS,
     USE_NESTEROV,
     WEIGHT_DECAY,
+    EIGEN_STATS,
 )
 
 from distributed_shampoo.utils.shampoo_checkpoint_utils import (
@@ -91,7 +92,7 @@ from distributed_shampoo.utils.shampoo_preconditioner_list import (
 )
 from distributed_shampoo.utils.shampoo_utils import compress_list
 
-from matrix_functions_types import EigenConfig
+from matrix_functions_types import EigenConfig, TopKCompressionEigenvectorConfig
 from torch.optim.optimizer import ParamsT, StateDict
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -289,7 +290,7 @@ class DistributedShampoo(torch.optim.Optimizer):
             If this field is an instance ShampooPreconditionerConfig, Shampoo uses the root inverse of the preconditioner.
             If this field is an instance EigenvalueCorrectedShampooPreconditionerConfig Shampoo uses corrected the eigenvalues/running Adam in the eigenbasis of preconditioner.
             (Default: DefaultShampooConfig)
-
+        eigen_stats (bool): If True, collect eigenvalue statistics. (Default: False)
     """
 
     def __init__(
@@ -316,6 +317,7 @@ class DistributedShampoo(torch.optim.Optimizer):
         distributed_config: DistributedConfig | None = None,
         preconditioner_dtype: torch.dtype = torch.float,
         preconditioner_config: PreconditionerConfig = DefaultShampooConfig,
+        eigen_stats: bool = False,
     ) -> None:
         # Hyperparameter checks.
         if not lr >= 0.0:
@@ -433,6 +435,7 @@ class DistributedShampoo(torch.optim.Optimizer):
                 USE_MERGE_DIMS: use_merge_dims,
                 PRECONDITIONER_DTYPE: preconditioner_dtype,
                 PRECONDITIONER_CONFIG: preconditioner_config,
+                EIGEN_STATS: eigen_stats,
             },
         )
 
@@ -1258,19 +1261,17 @@ class DistributedShampoo(torch.optim.Optimizer):
         param_to_key = {param: key for key, param in key_to_param}
         
         stats = {}
-        for idx, (state_lists, group) in enumerate(zip(self._per_group_state_lists, self.param_groups)):
+
+        for state_lists, group in zip(self._per_group_state_lists, self.param_groups):
             shampoo_preconditioner_list = state_lists[SHAMPOO_PRECONDITIONER_LIST]
-            if isinstance(shampoo_preconditioner_list, EigenvalueCorrectedShampooPreconditionerList):
+            if group[EIGEN_STATS] and isinstance(shampoo_preconditioner_list, EigenvalueCorrectedShampooPreconditionerList):
                 # Get eigenvalue stats for this group
-                group_eigen_stats = shampoo_preconditioner_list.eigenvector_stats()
-                
+                group_eigen_stats = shampoo_preconditioner_list.eigenvector_stats()                
                 # Map each parameter to its stats
-                param_stats = {}
                 for param, eigen_stat in zip(group[PARAMS], group_eigen_stats):
                     if param in param_to_key:
                         param_key = param_to_key[param]
-                        param_stats[param_key] = eigen_stat
                 
-                stats[f"group_{idx}"] = param_stats
+                    stats[param_key] = eigen_stat
            
         return stats

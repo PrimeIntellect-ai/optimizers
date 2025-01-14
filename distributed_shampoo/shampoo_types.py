@@ -63,6 +63,7 @@ MASKED_MOMENTUM_LIST = "masked_momentum_list"
 MOMENTUM_LIST = "momentum_list"
 PREVIOUS_GRAD_SELECTOR = "previous_grad_selector"
 SHAMPOO_PRECONDITIONER_LIST = "shampoo_preconditioner_list"
+EIGEN_STATS = "eigen_stats"
 
 
 ###### ENUM CLASSES ######
