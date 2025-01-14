@@ -1084,6 +1084,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         )
                         # Define computed_eigenvectors to prevent undefined local variable error.
                         computed_eigenvectors = factor_matrix_eigenvectors
+                        eigen_stats = None
 
                     # Check if we encounter NaN or inf values in computed eigenvectors.
                     if torch.isnan(computed_eigenvectors).any() or torch.isinf(computed_eigenvectors).any():

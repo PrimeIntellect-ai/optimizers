@@ -707,8 +707,6 @@ def matrix_eigenvectors(
             and step > eigenvector_computation_config.warmup_steps
         ):
 
-
-
             if eigenvector_computation_config.auto:
                 topk = eigen_stats.effective_rank
             elif isinstance(eigenvector_computation_config.topk_compression, int):
