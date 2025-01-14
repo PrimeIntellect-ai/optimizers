@@ -7,11 +7,12 @@ LICENSE file in the root directory of this source tree.
 
 """
 
+import dataclasses
 import enum
 import logging
 import math
 import time
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from fractions import Fraction
 from math import isfinite
 
@@ -621,8 +622,8 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95) -
 
     return effective_rank
 
-
-class EigenStats(NamedTuple):
+@dataclass
+class EigenStats:
     effective_rank: int
     og_rank: int
     
@@ -712,8 +713,9 @@ def matrix_eigenvectors(
             elif isinstance(eigenvector_computation_config.topk_compression, int):
                 topk = eigenvector_computation_config.topk_compression
             else:
-                topk = int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0])
+                topk = min(1,int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0]))
             
+            # print(f"topk {topk}, og_rank {eigen_stats.og_rank}, compression_ratio {eigen_stats.compression_ratio}")
             eigen_stats.effective_rank = topk
 
             if eigen_stats.compression_ratio < eigenvector_computation_config.min_compression_ratio:
