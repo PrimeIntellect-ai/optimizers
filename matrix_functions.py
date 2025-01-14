@@ -713,6 +713,8 @@ def matrix_eigenvectors(
                 topk = eigenvector_computation_config.topk_compression
             else:
                 topk = int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0])
+            
+            eigen_stats.effective_rank = topk
 
             if eigen_stats.compression_ratio < eigenvector_computation_config.min_compression_ratio:
                 print(f"Skipping eigenvector computation due to low compression ratio: {eigen_stats}")
