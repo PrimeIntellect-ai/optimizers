@@ -647,7 +647,7 @@ def matrix_eigenvectors(
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
     step: int | None = None,
-) -> Tensor | EigenStats:
+) -> tuple[Tensor, EigenStats | None]:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
 
@@ -691,36 +691,29 @@ def matrix_eigenvectors(
             A,
             retry_double_precision=eigenvector_computation_config.retry_double_precision,
         )
-
-        compression_t = eigenvector_computation_config.compression_t if isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig) else TopKCompressionEigenvectorConfig().compression_t
-        
-        eigen_stats = EigenStats(
-            effective_rank=compute_effective_rank(eigenvalues, compression_t),
-            og_rank=eigenvalues.shape[0],
-        )
-        
+                
         if step is None:
             raise ValueError("step param is required when using EighEigenvectorConfig.")
 
         if (
             isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig)
-            and eigenvalues.shape[0] > eigenvector_computation_config.min_dim
             and step > eigenvector_computation_config.warmup_steps
         ):
-
+        
             if eigenvector_computation_config.auto:
-                topk = eigen_stats.effective_rank
-            elif isinstance(eigenvector_computation_config.topk_compression, int):
-                topk = eigenvector_computation_config.topk_compression
+                topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target)
             else:
-                topk = min(1,int(eigenvector_computation_config.topk_compression * eigenvalues.shape[0]))
+                topk = max(1,int(eigenvector_computation_config.ratio * eigenvalues.shape[0]))
             
-            # print(f"topk {topk}, og_rank {eigen_stats.og_rank}, compression_ratio {eigen_stats.compression_ratio}")
-            eigen_stats.effective_rank = topk
+            eigen_stats = EigenStats(
+                effective_rank=topk,
+                og_rank=eigenvalues.shape[0],
+            )
 
-            if eigen_stats.compression_ratio < eigenvector_computation_config.min_compression_ratio:
-                print(f"Skipping eigenvector computation due to low compression ratio: {eigen_stats}")
-                return eigenvectors
+
+            # print(f"topk {topk}, og_rank {eigen_stats.og_rank}, compression_ratio {eigen_stats.compression_ratio}")
+            
+            eigen_stats.effective_rank = topk
             # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
                 eigenvalues, descending=True
@@ -732,6 +725,9 @@ def matrix_eigenvectors(
 
             mask[:, :topk] = 1.0
             eigenvectors = eigenvectors * mask
+        
+        else:
+            eigen_stats = None
 
         return eigenvectors, eigen_stats
 
