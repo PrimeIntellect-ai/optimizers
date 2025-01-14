@@ -91,6 +91,7 @@ from distributed_shampoo.utils.shampoo_preconditioner_list import (
     ShampooPreconditionerList,
 )
 from distributed_shampoo.utils.shampoo_utils import compress_list
+from matrix_functions import EigenStats
 
 from matrix_functions_types import EigenConfig, TopKCompressionEigenvectorConfig
 from torch.optim.optimizer import ParamsT, StateDict
@@ -1256,12 +1257,11 @@ class DistributedShampoo(torch.optim.Optimizer):
 
     
     @torch.no_grad()
-    def eigenvector_stats(self, key_to_param: Iterator[tuple[str, torch.Tensor]], summary: bool = False):
+    def eigenvector_stats(self, key_to_param: Iterator[tuple[str, torch.Tensor]]) -> dict[str, EigenStats]:
         # Create mapping from parameter to its name
         param_to_key = {param: key for key, param in key_to_param}
         
         stats = {}
-
         for state_lists, group in zip(self._per_group_state_lists, self.param_groups):
             shampoo_preconditioner_list = state_lists[SHAMPOO_PRECONDITIONER_LIST]
             if group[EIGEN_STATS] and isinstance(shampoo_preconditioner_list, EigenvalueCorrectedShampooPreconditionerList):
