@@ -144,6 +144,8 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
     auto_compression_target: float = 0.95
 
     warmup_steps: int = 0
+    
+    inverse: bool = False
 
     def __post_init__(self):
         if isinstance(self.ratio, float):

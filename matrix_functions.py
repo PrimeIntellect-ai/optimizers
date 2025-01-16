@@ -577,7 +577,7 @@ def compute_matrix_root_inverse_residuals(
     return relative_error, relative_residual
 
 
-def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95) -> int:
+def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95, inverse: bool = False) -> int:
     """
     Compute the effective rank of a matrix from its eigenvalues.
 
@@ -602,7 +602,12 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95) -
         raise ValueError(f"Expected 1D tensor of eigenvalues, got shape {eigenvalues.shape}")
 
     # Take absolute values and sort in descending order
+    
     eigenvalues = torch.abs(eigenvalues)
+    
+    if inverse:
+        eigenvalues = 1 / eigenvalues
+    
     sorted_eigenvalues, _ = torch.sort(eigenvalues, descending=True)
 
     # Compute cumulative sum and normalize
@@ -701,7 +706,7 @@ def matrix_eigenvectors(
         ):
         
             if eigenvector_computation_config.auto:
-                topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target)
+                topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
             else:
                 topk = max(1,int(eigenvector_computation_config.ratio * eigenvalues.shape[0]))
             
@@ -716,7 +721,7 @@ def matrix_eigenvectors(
             eigen_stats.effective_rank = topk
             # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
-                eigenvalues, descending=True
+                eigenvalues, descending=not(eigenvector_computation_config.inverse)
             )  # note here only need topk so full sort is not efficient
             eigenvectors = eigenvectors[:, indices]
 
