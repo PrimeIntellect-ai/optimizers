@@ -1121,7 +1121,8 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     grad = self._precondition_grad(
                         grad=grad,
                         preconditioner_list=factor_eigenvectors,
-                    )
+                    ) 
+                    # note(sami): this call is equivalent to (Q_L.T @ grad @ Q_R) 
 
                 # Precondition with inverse root of corrected eigenvalues.
                 grad.div_(
