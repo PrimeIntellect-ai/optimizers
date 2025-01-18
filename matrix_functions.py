@@ -652,7 +652,7 @@ def matrix_eigenvectors(
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
     step: int | None = None,
-) -> Tensor:
+) -> tuple[Tensor, Tensor | None]:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
 
@@ -716,16 +716,18 @@ def matrix_eigenvectors(
             eigenvalues, indices = torch.sort(
                 eigenvalues, descending=not(eigenvector_computation_config.inverse)
             )  # note here only need topk so full sort is not efficient
-            eigenvectors = eigenvectors[:, indices]
+            # eigenvectors = eigenvectors[:, indices]
 
-            # Zero out all but top k eigenvectors
-            mask = torch.zeros_like(eigenvectors)
+            # # Zero out all but top k eigenvectors
+            # mask = torch.zeros_like(eigenvectors)
 
-            mask[:, :topk] = 1.0
-            eigenvectors = eigenvectors * mask
+            # mask[:, :topk] = 1.0
+            # eigenvectors = eigenvectors * mask
+
+        else:
+            indices = None
         
-
-        return eigenvectors
+        return eigenvectors, indices
 
     elif isinstance(eigenvector_computation_config, QRConfig):
         

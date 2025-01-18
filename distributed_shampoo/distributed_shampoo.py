@@ -91,8 +91,6 @@ from distributed_shampoo.utils.shampoo_preconditioner_list import (
     ShampooPreconditionerList,
 )
 from distributed_shampoo.utils.shampoo_utils import compress_list
-from matrix_functions import EigenStats
-
 from matrix_functions_types import EigenConfig, TopKCompressionEigenvectorConfig
 from torch.optim.optimizer import ParamsT, StateDict
 

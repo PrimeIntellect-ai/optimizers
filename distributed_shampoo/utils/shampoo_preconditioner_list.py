@@ -24,7 +24,7 @@ from distributed_shampoo.shampoo_types import (
 )
 from distributed_shampoo.utils.shampoo_block_info import BlockInfo
 from distributed_shampoo.utils.shampoo_utils import compress_list, get_dtype_size
-from matrix_functions import EigenStats, check_diagonal, matrix_eigenvectors, matrix_inverse_root
+from matrix_functions import check_diagonal, matrix_eigenvectors, matrix_inverse_root
 
 from matrix_functions_types import EigenvectorConfig, RootInvConfig
 from optimizer_modules import OptimizerModule
@@ -303,7 +303,8 @@ class EigenvalueCorrectedShampooKroneckerFactorsList(BaseShampooKroneckerFactors
 
     factor_matrices_eigenvectors: tuple[Tensor, ...]
     corrected_eigenvalues: Tensor
-    eigen_stats: EigenStats | None = None
+    # eigen_stats: EigenStats | None = None
+    eigenvalue_indices: list[Tensor | None]
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -928,6 +929,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
             ),
             corrected_eigenvalues=block_info.get_tensor(kronecker_factors_state.corrected_eigenvalues),
             factor_matrix_indices=kronecker_factors_state.factor_matrix_indices,
+            eigenvalue_indices=list(None for _ in range(len(kronecker_factors_state.factor_matrices))),
         )
 
     def _get_inverse_roots_from_override(
@@ -1042,16 +1044,23 @@ class EigenvalueCorrectedShampooPreconditionerList(
         with profiler.record_function(f"## {self.__class__.__name__}:{self._amortized_computation.__name__} ##"):
             for idx, kronecker_factors in enumerate(self._masked_kronecker_factors_list):
                 success_tracker: list[bool] = []
+                if kronecker_factors.eigenvalue_indices is None:
+                    kronecker_factors.eigenvalue_indices = list(None for _ in range(len(kronecker_factors.factor_matrices)))
+                    
                 for (
                     factor_matrix,
                     factor_matrix_eigenvectors,
                     is_factor_matrix_diagonal,
                     factor_matrix_index,
+                    eigenvalue_indices,
+                    idx
                 ) in zip(
                     kronecker_factors.factor_matrices,
                     kronecker_factors.factor_matrices_eigenvectors,
                     kronecker_factors.is_factor_matrices_diagonal,
                     kronecker_factors.factor_matrix_indices,
+                    kronecker_factors.eigenvalue_indices,
+                    range(len(kronecker_factors.factor_matrices)),
                     strict=True,
                 ):
                     BaseShampooPreconditionerList._check_factor_matrix_for_diagonality_nan_and_inf(
@@ -1066,7 +1075,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         self._preconditioner_config.amortized_computation_config,
                     )
                     try:
-                        computed_eigenvectors = matrix_eigenvectors(
+                        computed_eigenvectors, computed_eigenvalue_indices = matrix_eigenvectors(
                             A=factor_matrix,
                             eigenvectors_estimate=factor_matrix_eigenvectors,
                             eigenvector_computation_config=eigenvector_computation_config,
@@ -1084,6 +1093,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         )
                         # Define computed_eigenvectors to prevent undefined local variable error.
                         computed_eigenvectors = factor_matrix_eigenvectors
+                        computed_eigenvalue_indices = eigenvalue_indices
                         # eigen_stats = None
 
                     # Check if we encounter NaN or inf values in computed eigenvectors.
@@ -1094,7 +1104,12 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             f"To mitigate, check factor matrix before the matrix computation: {factor_matrix=}"
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
-                    # self._masked_kronecker_factors_list[idx].eigen_stats = eigen_stats
+                    if eigenvalue_indices is not None:
+                        eigenvalue_indices.copy_(computed_eigenvalue_indices)  
+                    elif eigenvalue_indices is None and computed_eigenvalue_indices is not None:
+                        kronecker_factors.eigenvalue_indices[idx] = computed_eigenvalue_indices
+                        
+                         
 
                 # Only reuse previous eigenvectors if tolerance is not exceeded.
                 self._raise_exception_if_failure_tolerance_exceeded(
