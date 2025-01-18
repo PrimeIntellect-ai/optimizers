@@ -646,13 +646,18 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95, i
 #             "compression_ratio": self.compression_ratio,
 #         }
 
+@dataclass
+class TopkIndices:
+    indices: Tensor
+    topk: int
+
 def matrix_eigenvectors(
     A: Tensor,
     eigenvectors_estimate: Tensor | None = None,
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
     step: int | None = None,
-) -> tuple[Tensor, Tensor | None]:
+) -> tuple[Tensor, TopkIndices | None]:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
 
@@ -723,11 +728,13 @@ def matrix_eigenvectors(
 
             # mask[:, :topk] = 1.0
             # eigenvectors = eigenvectors * mask
+            
+            topk_indices = TopkIndices(indices, topk)
 
         else:
-            indices = None
+            topk_indices = None
         
-        return eigenvectors, indices
+        return eigenvectors, topk_indices
 
     elif isinstance(eigenvector_computation_config, QRConfig):
         

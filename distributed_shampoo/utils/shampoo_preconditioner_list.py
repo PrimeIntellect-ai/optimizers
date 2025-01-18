@@ -24,7 +24,7 @@ from distributed_shampoo.shampoo_types import (
 )
 from distributed_shampoo.utils.shampoo_block_info import BlockInfo
 from distributed_shampoo.utils.shampoo_utils import compress_list, get_dtype_size
-from matrix_functions import check_diagonal, matrix_eigenvectors, matrix_inverse_root
+from matrix_functions import TopkIndices, check_diagonal, matrix_eigenvectors, matrix_inverse_root
 
 from matrix_functions_types import EigenvectorConfig, RootInvConfig
 from optimizer_modules import OptimizerModule
@@ -304,7 +304,7 @@ class EigenvalueCorrectedShampooKroneckerFactorsList(BaseShampooKroneckerFactors
     factor_matrices_eigenvectors: tuple[Tensor, ...]
     corrected_eigenvalues: Tensor
     # eigen_stats: EigenStats | None = None
-    eigenvalue_indices: list[Tensor | None]
+    eigenvalue_indices: list[TopkIndices | None]
 
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -1015,6 +1015,20 @@ class EigenvalueCorrectedShampooPreconditionerList(
                 corrected_eigenvalues = kronecker_factors.corrected_eigenvalues
                 use_eigenbasis = factor_eigenvectors[0].any()
                 grad = masked_grad.clone()
+                
+                
+                def _apply_topk(eigen_vector: Tensor, topk_indices: TopkIndices | None) -> Tensor:
+                    if topk_indices is None:
+                        return eigen_vector
+                    
+                    mask = torch.zeros_like(eigen_vector)
+                    # print(f"{mask.shape=}, {topk_indices.indices.shape=}, {topk_indices.topk=}")
+
+                    mask[topk_indices.indices[:topk_indices.topk]] = 1.0
+                    return eigen_vector * mask
+                
+                factor_eigenvectors = ( _apply_topk(eigen_vector, topk_indices) for eigen_vector, topk_indices in zip(factor_eigenvectors, kronecker_factors.eigenvalue_indices, strict=True) )
+                
                 if use_eigenbasis:
                     # Convert to eigenbasis of Shampoo factor matrices.
                     grad = self._precondition_grad(
@@ -1105,7 +1119,9 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
                     if eigenvalue_indices is not None:
-                        eigenvalue_indices.copy_(computed_eigenvalue_indices)  
+                        eigenvalue_indices.indices = computed_eigenvalue_indices.indices
+                        eigenvalue_indices.topk = computed_eigenvalue_indices.topk
+                        
                     elif eigenvalue_indices is None and computed_eigenvalue_indices is not None:
                         kronecker_factors.eigenvalue_indices[idx] = computed_eigenvalue_indices
                         
