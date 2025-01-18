@@ -1256,22 +1256,22 @@ class DistributedShampoo(torch.optim.Optimizer):
                     group[key] = deepcopy(value)
 
     
-    @torch.no_grad()
-    def eigenvector_stats(self, key_to_param: Iterator[tuple[str, torch.Tensor]]) -> dict[str, EigenStats]:
-        # Create mapping from parameter to its name
-        param_to_key = {param: key for key, param in key_to_param}
+    # @torch.no_grad()
+    # def eigenvector_stats(self, key_to_param: Iterator[tuple[str, torch.Tensor]]) -> dict[str, EigenStats]:
+    #     # Create mapping from parameter to its name
+    #     param_to_key = {param: key for key, param in key_to_param}
         
-        stats = {}
-        for state_lists, group in zip(self._per_group_state_lists, self.param_groups):
-            shampoo_preconditioner_list = state_lists[SHAMPOO_PRECONDITIONER_LIST]
-            if group[EIGEN_STATS] and isinstance(shampoo_preconditioner_list, EigenvalueCorrectedShampooPreconditionerList):
-                # Get eigenvalue stats for this group
-                group_eigen_stats = shampoo_preconditioner_list.eigenvector_stats()                
-                # Map each parameter to its stats
-                for param, eigen_stat in zip(group[PARAMS], group_eigen_stats):
-                    if param in param_to_key:
-                        param_key = param_to_key[param]
+    #     stats = {}
+    #     for state_lists, group in zip(self._per_group_state_lists, self.param_groups):
+    #         shampoo_preconditioner_list = state_lists[SHAMPOO_PRECONDITIONER_LIST]
+    #         if group[EIGEN_STATS] and isinstance(shampoo_preconditioner_list, EigenvalueCorrectedShampooPreconditionerList):
+    #             # Get eigenvalue stats for this group
+    #             group_eigen_stats = shampoo_preconditioner_list.eigenvector_stats()                
+    #             # Map each parameter to its stats
+    #             for param, eigen_stat in zip(group[PARAMS], group_eigen_stats):
+    #                 if param in param_to_key:
+    #                     param_key = param_to_key[param]
                 
-                    stats[param_key] = eigen_stat
+    #                 stats[param_key] = eigen_stat
            
-        return stats
+    #     return stats

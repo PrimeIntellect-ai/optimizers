@@ -1066,7 +1066,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         self._preconditioner_config.amortized_computation_config,
                     )
                     try:
-                        computed_eigenvectors, eigen_stats = matrix_eigenvectors(
+                        computed_eigenvectors = matrix_eigenvectors(
                             A=factor_matrix,
                             eigenvectors_estimate=factor_matrix_eigenvectors,
                             eigenvector_computation_config=eigenvector_computation_config,
@@ -1084,7 +1084,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         )
                         # Define computed_eigenvectors to prevent undefined local variable error.
                         computed_eigenvectors = factor_matrix_eigenvectors
-                        eigen_stats = None
+                        # eigen_stats = None
 
                     # Check if we encounter NaN or inf values in computed eigenvectors.
                     if torch.isnan(computed_eigenvectors).any() or torch.isinf(computed_eigenvectors).any():
@@ -1094,7 +1094,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             f"To mitigate, check factor matrix before the matrix computation: {factor_matrix=}"
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
-                    self._masked_kronecker_factors_list[idx].eigen_stats = eigen_stats
+                    # self._masked_kronecker_factors_list[idx].eigen_stats = eigen_stats
 
                 # Only reuse previous eigenvectors if tolerance is not exceeded.
                 self._raise_exception_if_failure_tolerance_exceeded(
@@ -1105,5 +1105,5 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     ),
                 )
                 
-    def eigenvector_stats(self) -> tuple[EigenStats | None, ...]:
-        return tuple(kronecker_factors.eigen_stats for kronecker_factors in self._masked_kronecker_factors_list)
+    # def eigenvector_stats(self) -> tuple[EigenStats | None, ...]:
+    #     return tuple(kronecker_factors.eigen_stats for kronecker_factors in self._masked_kronecker_factors_list)

@@ -652,7 +652,7 @@ def matrix_eigenvectors(
     eigenvector_computation_config: EigenvectorConfig = DefaultEighEigenvectorConfig,
     is_diagonal: bool = False,
     step: int | None = None,
-) -> tuple[Tensor, EigenStats | None]:
+) -> Tensor:
     """Compute eigenvectors of matrix using eigendecomposition of symmetric positive (semi-)definite matrix.
             A = Q L Q^T => Q
 
@@ -734,7 +734,7 @@ def matrix_eigenvectors(
         else:
             eigen_stats = None
 
-        return eigenvectors, eigen_stats
+        return eigenvectors
 
     elif isinstance(eigenvector_computation_config, QRConfig):
         
