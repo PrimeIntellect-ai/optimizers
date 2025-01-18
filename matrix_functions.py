@@ -627,24 +627,24 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95, i
 
     return effective_rank
 
-@dataclass
-class EigenStats:
-    effective_rank: int
-    og_rank: int
+# @dataclass
+# class EigenStats:
+#     effective_rank: int
+#     og_rank: int
     
-    @property
-    def compression_ratio(self):
-        return 1 - self.effective_rank / self.og_rank
+#     @property
+#     def compression_ratio(self):
+#         return 1 - self.effective_rank / self.og_rank
     
-    def __repr__(self):
-        return f"Effective rank: {self.effective_rank}, og_rank: {self.og_rank}, compression_ratio: {self.compression_ratio}"
+#     def __repr__(self):
+#         return f"Effective rank: {self.effective_rank}, og_rank: {self.og_rank}, compression_ratio: {self.compression_ratio}"
 
-    def log_stats(self) -> dict[str, int|float]:
-        return {
-            "effective_rank": self.effective_rank,
-            "og_rank": self.og_rank,
-            "compression_ratio": self.compression_ratio,
-        }
+#     def log_stats(self) -> dict[str, int|float]:
+#         return {
+#             "effective_rank": self.effective_rank,
+#             "og_rank": self.og_rank,
+#             "compression_ratio": self.compression_ratio,
+#         }
 
 def matrix_eigenvectors(
     A: Tensor,
@@ -710,16 +710,9 @@ def matrix_eigenvectors(
             else:
                 topk = max(1,int(eigenvector_computation_config.ratio * eigenvalues.shape[0]))
             
-            eigen_stats = EigenStats(
-                effective_rank=topk,
-                og_rank=eigenvalues.shape[0],
-            )
-
 
             # print(f"topk {topk}, og_rank {eigen_stats.og_rank}, compression_ratio {eigen_stats.compression_ratio}")
-            
-            eigen_stats.effective_rank = topk
-            # Sort eigenvalues and eigenvectors in descending order
+                        # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
                 eigenvalues, descending=not(eigenvector_computation_config.inverse)
             )  # note here only need topk so full sort is not efficient
@@ -731,8 +724,6 @@ def matrix_eigenvectors(
             mask[:, :topk] = 1.0
             eigenvectors = eigenvectors * mask
         
-        else:
-            eigen_stats = None
 
         return eigenvectors
 
