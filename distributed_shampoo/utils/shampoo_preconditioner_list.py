@@ -1025,7 +1025,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     # print(f"{mask.shape=}, {topk_indices.indices.shape=}, {topk_indices.topk=}")
 
                     mask[topk_indices.indices[:topk_indices.topk]] = 1.0
-                    return eigen_vector * mask
+                    return eigen_vector.clone() * mask
                 
                 factor_eigenvectors = tuple( _apply_topk(eigen_vector, topk_indices) for eigen_vector, topk_indices in zip(factor_eigenvectors, kronecker_factors.eigenvalue_indices, strict=True) )
                 
