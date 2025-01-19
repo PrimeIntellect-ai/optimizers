@@ -1023,8 +1023,11 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     
                     mask = torch.zeros_like(eigen_vector)
                     # print(f"{mask.shape=}, {topk_indices.indices.shape=}, {topk_indices.topk=}")
-
-                    mask[topk_indices.indices[:topk_indices.topk]] = 1.0
+                    if topk_indices.top_and_bottom:
+                        mask[topk_indices.indices[topk_indices.topk//2:]] = 1.0
+                        mask[topk_indices.indices[:topk_indices.topk//2]] = 1.0
+                    else:
+                        mask[topk_indices.indices[:topk_indices.topk]] = 1.0
                     return eigen_vector.clone() * mask
                 
                 factor_eigenvectors = tuple( _apply_topk(eigen_vector, topk_indices) for eigen_vector, topk_indices in zip(factor_eigenvectors, kronecker_factors.eigenvalue_indices, strict=True) )

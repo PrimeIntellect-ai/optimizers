@@ -650,6 +650,7 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95, i
 class TopkIndices:
     indices: Tensor
     topk: int
+    top_and_bottom: bool = False
 
 def matrix_eigenvectors(
     A: Tensor,
@@ -714,8 +715,7 @@ def matrix_eigenvectors(
                 topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
             else:
                 topk = max(1,int(eigenvector_computation_config.ratio * eigenvalues.shape[0]))
-            
-
+                
             # print(f"topk {topk}, og_rank {eigen_stats.og_rank}, compression_ratio {eigen_stats.compression_ratio}")
                         # Sort eigenvalues and eigenvectors in descending order
             eigenvalues, indices = torch.sort(
@@ -729,7 +729,7 @@ def matrix_eigenvectors(
             # mask[:, :topk] = 1.0
             # eigenvectors = eigenvectors * mask
             
-            topk_indices = TopkIndices(indices, topk)
+            topk_indices = TopkIndices(indices, topk, eigenvector_computation_config.top_and_bottom)
 
         else:
             topk_indices = None

@@ -146,6 +146,8 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
     warmup_steps: int = 0
     
     inverse: bool = False
+    
+    top_and_bottom: bool = False
 
     def __post_init__(self):
         if isinstance(self.ratio, float):
