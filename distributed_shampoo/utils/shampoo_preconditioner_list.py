@@ -1027,7 +1027,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     mask[topk_indices.indices[:topk_indices.topk]] = 1.0
                     return eigen_vector * mask
                 
-                factor_eigenvectors = ( _apply_topk(eigen_vector, topk_indices) for eigen_vector, topk_indices in zip(factor_eigenvectors, kronecker_factors.eigenvalue_indices, strict=True) )
+                factor_eigenvectors = tuple( _apply_topk(eigen_vector, topk_indices) for eigen_vector, topk_indices in zip(factor_eigenvectors, kronecker_factors.eigenvalue_indices, strict=True) )
                 
                 if use_eigenbasis:
                     # Convert to eigenbasis of Shampoo factor matrices.
