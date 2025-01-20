@@ -24,7 +24,7 @@ from distributed_shampoo.shampoo_types import (
 )
 from distributed_shampoo.utils.shampoo_block_info import BlockInfo
 from distributed_shampoo.utils.shampoo_utils import compress_list, get_dtype_size
-from matrix_functions import TopkIndices, check_diagonal, matrix_eigenvectors, matrix_inverse_root
+from matrix_functions import EigenStats, TopkIndices, check_diagonal, matrix_eigenvectors, matrix_inverse_root
 
 from matrix_functions_types import EigenvectorConfig, RootInvConfig
 from optimizer_modules import OptimizerModule
@@ -1139,5 +1139,15 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     ),
                 )
                 
-    # def eigenvector_stats(self) -> tuple[EigenStats | None, ...]:
-    #     return tuple(kronecker_factors.eigen_stats for kronecker_factors in self._masked_kronecker_factors_list)
+    def eigenvector_stats(self) -> tuple[dict[str, EigenStats] | None, ...]:
+        stats_factor_list = []
+                
+        for kronecker_factors in self._masked_kronecker_factors_list:
+            stats = {}
+            for idx,topk_indices in enumerate(kronecker_factors.eigenvalue_indices):
+                if topk_indices is not None:
+                    key = "left" if idx == 1 else "right"
+                    stats[key] = topk_indices.stats 
+            stats_factor_list.append(stats)
+        return tuple(stats_factor_list)
+

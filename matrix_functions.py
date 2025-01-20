@@ -627,29 +627,30 @@ def compute_effective_rank(eigenvalues: torch.Tensor, threshold: float = 0.95, i
 
     return effective_rank
 
-# @dataclass
-# class EigenStats:
-#     effective_rank: int
-#     og_rank: int
+@dataclass
+class EigenStats:
+    effective_rank: int
+    og_rank: int
     
-#     @property
-#     def compression_ratio(self):
-#         return 1 - self.effective_rank / self.og_rank
+    @property
+    def compression_ratio(self):
+        return 1 - self.effective_rank / self.og_rank
     
-#     def __repr__(self):
-#         return f"Effective rank: {self.effective_rank}, og_rank: {self.og_rank}, compression_ratio: {self.compression_ratio}"
+    def __repr__(self):
+        return f"Effective rank: {self.effective_rank}, og_rank: {self.og_rank}, compression_ratio: {self.compression_ratio}"
 
-#     def log_stats(self) -> dict[str, int|float]:
-#         return {
-#             "effective_rank": self.effective_rank,
-#             "og_rank": self.og_rank,
-#             "compression_ratio": self.compression_ratio,
-#         }
+    def log_stats(self) -> dict[str, int|float]:
+        return {
+            "effective_rank": self.effective_rank,
+            "og_rank": self.og_rank,
+            "compression_ratio": self.compression_ratio,
+        }
 
 @dataclass
 class TopkIndices:
     indices: Tensor
     topk: int
+    stats: EigenStats
     top_and_bottom: bool = False
     only_right: bool = False
     only_left: bool = False
@@ -735,15 +736,10 @@ def matrix_eigenvectors(
             eigenvalues, indices = torch.sort(
                 eigenvalues, descending=not(eigenvector_computation_config.inverse)
             )  # note here only need topk so full sort is not efficient
-            # eigenvectors = eigenvectors[:, indices]
-
-            # # Zero out all but top k eigenvectors
-            # mask = torch.zeros_like(eigenvectors)
-
-            # mask[:, :topk] = 1.0
-            # eigenvectors = eigenvectors * mask
             
-            topk_indices = TopkIndices(indices, topk, eigenvector_computation_config.top_and_bottom, eigenvector_computation_config.only_right, eigenvector_computation_config.only_left)
+            stats = EigenStats(effective_rank=topk, og_rank=eigenvalues.shape[0])
+            
+            topk_indices = TopkIndices(indices=indices, topk=topk, stats=stats, top_and_bottom=eigenvector_computation_config.top_and_bottom, only_right=eigenvector_computation_config.only_right, only_left=eigenvector_computation_config.only_left)
             
         else:
             topk_indices = None
