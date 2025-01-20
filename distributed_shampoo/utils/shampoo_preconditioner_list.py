@@ -1017,7 +1017,9 @@ class EigenvalueCorrectedShampooPreconditionerList(
                 grad = masked_grad.clone()
                 
                 
-                def _apply_topk(eigen_vector: Tensor, topk_indices: TopkIndices | None) -> Tensor:                    
+                def _apply_topk(eigen_vector: Tensor, topk_indices: TopkIndices | None) -> Tensor:  
+                    if topk_indices is None:
+                        return eigen_vector
                     mask = torch.zeros_like(eigen_vector)
                     # print(f"{mask.shape=}, {topk_indices.indices.shape=}, {topk_indices.topk=}")
                     if topk_indices.top_and_bottom:
@@ -1035,7 +1037,6 @@ class EigenvalueCorrectedShampooPreconditionerList(
                     if len(factor_eigenvectors) == 2:
                         new_factor_eigenvectors = []
                         
-                        print(f"{len(factor_eigenvectors)=}, {len(kronecker_factors.eigenvalue_indices)=}")
                         topk_config_1 = kronecker_factors.eigenvalue_indices[0]
                         topk_config_2 = kronecker_factors.eigenvalue_indices[1]
                         
@@ -1141,7 +1142,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             f"To mitigate, check factor matrix before the matrix computation: {factor_matrix=}"
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
-                    if eigenvalue_indices is not None:
+                    if eigenvalue_indices is not None and computed_eigenvalue_indices is not None:
                         eigenvalue_indices.indices = computed_eigenvalue_indices.indices
                         eigenvalue_indices.topk = computed_eigenvalue_indices.topk
                         

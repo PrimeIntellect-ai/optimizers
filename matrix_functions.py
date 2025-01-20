@@ -712,9 +712,21 @@ def matrix_eigenvectors(
             isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig)
             and step > eigenvector_computation_config.warmup_steps
         ):
-        
+            if eigenvector_computation_config.min_ratio is not None:
+                effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
+                compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
+
+                if  compression_ratio < eigenvector_computation_config.min_ratio:
+                    print(f"skipping compression because compression ratio {compression_ratio} is less than min_ratio {eigenvector_computation_config.min_ratio}. Eigenvalues.shape: {eigenvalues.shape}, effective_rank: {effective_rank}")
+                    return eigenvectors, None
+            else:
+                effective_rank = None
+            
             if eigenvector_computation_config.auto:
-                topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
+                if effective_rank is None:
+                    topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
+                else:
+                    topk = effective_rank
             else:
                 topk = max(1,int(eigenvector_computation_config.ratio * eigenvalues.shape[0]))
                 
@@ -732,7 +744,7 @@ def matrix_eigenvectors(
             # eigenvectors = eigenvectors * mask
             
             topk_indices = TopkIndices(indices, topk, eigenvector_computation_config.top_and_bottom, eigenvector_computation_config.only_right, eigenvector_computation_config.only_left)
-
+            
         else:
             topk_indices = None
         

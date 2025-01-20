@@ -151,6 +151,8 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
     
     only_right: bool = False
     only_left: bool = False
+    
+    min_ratio: float | None = None
 
     def __post_init__(self):
         if isinstance(self.ratio, float):
