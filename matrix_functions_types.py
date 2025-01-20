@@ -148,6 +148,9 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
     inverse: bool = False
     
     top_and_bottom: bool = False
+    
+    only_right: bool = False
+    only_left: bool = False
 
     def __post_init__(self):
         if isinstance(self.ratio, float):
@@ -156,3 +159,7 @@ class TopKCompressionEigenvectorConfig(EighEigenvectorConfig):
 
             if 0 <= self.auto_compression_target and self.auto_compression_target >= 1:
                 raise ValueError("compression_value must be between 0 and 1")
+        
+        if self.only_right and self.only_left:
+            raise ValueError("only_right and only_left cannot be both True")
+        
