@@ -1017,10 +1017,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                 grad = masked_grad.clone()
                 
                 
-                def _apply_topk(eigen_vector: Tensor, topk_indices: TopkIndices | None) -> Tensor:
-                    if topk_indices is None:
-                        return eigen_vector
-                    
+                def _apply_topk(eigen_vector: Tensor, topk_indices: TopkIndices | None) -> Tensor:                    
                     mask = torch.zeros_like(eigen_vector)
                     # print(f"{mask.shape=}, {topk_indices.indices.shape=}, {topk_indices.topk=}")
                     if topk_indices.top_and_bottom:
@@ -1030,9 +1027,32 @@ class EigenvalueCorrectedShampooPreconditionerList(
                         mask[topk_indices.indices[:topk_indices.topk]] = 1.0
                     return eigen_vector.clone() * mask
                 
-                factor_eigenvectors = tuple( _apply_topk(eigen_vector, topk_indices) for eigen_vector, topk_indices in zip(factor_eigenvectors, kronecker_factors.eigenvalue_indices, strict=True) )
+                
                 
                 if use_eigenbasis:
+                    
+                    
+                    if len(factor_eigenvectors) == 2:
+                        new_factor_eigenvectors = []
+                        
+                        print(f"{len(factor_eigenvectors)=}, {len(kronecker_factors.eigenvalue_indices)=}")
+                        topk_config_1 = kronecker_factors.eigenvalue_indices[0]
+                        topk_config_2 = kronecker_factors.eigenvalue_indices[1]
+                        
+                        if topk_config_1 is not None:
+                            
+                            if not topk_config_1.only_left:
+                                new_factor_eigenvectors.append(_apply_topk(factor_eigenvectors[0], topk_config_1))
+                            else:
+                                new_factor_eigenvectors.append(factor_eigenvectors[0])
+                            
+                            if not topk_config_1.only_right:
+                                new_factor_eigenvectors.append(_apply_topk(factor_eigenvectors[1], topk_config_2))
+                            else:
+                                new_factor_eigenvectors.append(factor_eigenvectors[1])
+                            
+                        factor_eigenvectors = tuple(new_factor_eigenvectors)
+                                        
                     # Convert to eigenbasis of Shampoo factor matrices.
                     grad = self._precondition_grad(
                         grad=grad,

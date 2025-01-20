@@ -651,6 +651,8 @@ class TopkIndices:
     indices: Tensor
     topk: int
     top_and_bottom: bool = False
+    only_right: bool = False
+    only_left: bool = False
 
 def matrix_eigenvectors(
     A: Tensor,
@@ -729,7 +731,7 @@ def matrix_eigenvectors(
             # mask[:, :topk] = 1.0
             # eigenvectors = eigenvectors * mask
             
-            topk_indices = TopkIndices(indices, topk, eigenvector_computation_config.top_and_bottom)
+            topk_indices = TopkIndices(indices, topk, eigenvector_computation_config.top_and_bottom, eigenvector_computation_config.only_right, eigenvector_computation_config.only_left)
 
         else:
             topk_indices = None
