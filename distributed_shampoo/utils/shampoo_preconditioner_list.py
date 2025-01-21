@@ -1121,12 +1121,7 @@ class EigenvalueCorrectedShampooPreconditionerList(
                             f"To mitigate, check factor matrix before the matrix computation: {factor_matrix=}"
                         )
                     factor_matrix_eigenvectors.copy_(computed_eigenvectors)
-                    if eigenvalue_indices is not None and computed_eigenvalue_indices is not None:
-                        eigenvalue_indices.indices = computed_eigenvalue_indices.indices
-                        eigenvalue_indices.topk = computed_eigenvalue_indices.topk
-                        
-                    elif eigenvalue_indices is None and computed_eigenvalue_indices is not None:
-                        kronecker_factors.eigenvalue_indices[idx] = computed_eigenvalue_indices
+                    kronecker_factors.eigenvalue_indices[idx] = computed_eigenvalue_indices
                         
                          
 
