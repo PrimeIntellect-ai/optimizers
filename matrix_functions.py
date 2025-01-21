@@ -713,21 +713,15 @@ def matrix_eigenvectors(
             isinstance(eigenvector_computation_config, TopKCompressionEigenvectorConfig)
             and step > eigenvector_computation_config.warmup_steps
         ):
-            if eigenvector_computation_config.min_ratio is not None:
-                effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
-                compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
-
-                if  compression_ratio < eigenvector_computation_config.min_ratio:
-                    print(f"skipping compression because compression ratio {compression_ratio} is less than min_ratio {eigenvector_computation_config.min_ratio}. Eigenvalues.shape: {eigenvalues.shape}, effective_rank: {effective_rank}")
-                    return eigenvectors, None
-            else:
-                effective_rank = None
+            effective_rank = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
+            compression_ratio = 1 - effective_rank / eigenvalues.shape[0]
             
-            if eigenvector_computation_config.auto:
-                if effective_rank is None:
-                    topk = compute_effective_rank(eigenvalues, eigenvector_computation_config.auto_compression_target, inverse=eigenvector_computation_config.inverse)
-                else:
-                    topk = effective_rank
+            if eigenvector_computation_config.min_ratio is not None and compression_ratio < eigenvector_computation_config.min_ratio:
+                print(f"skipping compression because compression ratio {compression_ratio} is less than min_ratio {eigenvector_computation_config.min_ratio}. Eigenvalues.shape: {eigenvalues.shape}, effective_rank: {effective_rank}")
+                topk = eigenvalues.shape[0]
+
+            elif eigenvector_computation_config.auto:
+                topk = effective_rank
             else:
                 topk = max(1,int(eigenvector_computation_config.ratio * eigenvalues.shape[0]))
                 
