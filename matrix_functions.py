@@ -731,7 +731,7 @@ def matrix_eigenvectors(
                 eigenvalues, descending=not(eigenvector_computation_config.inverse)
             )  # note here only need topk so full sort is not efficient
             
-            stats = EigenStats(effective_rank=topk, og_rank=eigenvalues.shape[0])
+            stats = EigenStats(effective_rank=effective_rank, og_rank=eigenvalues.shape[0])
             
             topk_indices = TopkIndices(indices=indices, topk=topk, stats=stats, top_and_bottom=eigenvector_computation_config.top_and_bottom, only_right=eigenvector_computation_config.only_right, only_left=eigenvector_computation_config.only_left)
             
